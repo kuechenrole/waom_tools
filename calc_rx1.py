@@ -1,9 +1,19 @@
 from netCDF4 import Dataset
+from sys import argv
 from numpy import *
 from calc_z import *
 
+# Calculates the spacial distribution of rx1 from given ROMS
+# grid file and s-coordinate controling parameters amd saves the rx1 field
+# to a netCDF file
+# Usage:
+# python calc_rx1.py grid_path theta_s theta_b hc N Vstretching(2 or 4) out_file
+# 
+# Origin: Kaitlin Naughten
+
 def calc_rx1 (grid_path, theta_s, theta_b, hc, N, Vstretching, out_file):
 
+    # read grid variables
     id = Dataset(grid_path, 'r')
     lon_2d = id.variables['lon_rho'][:,:]
     lat_2d = id.variables['lat_rho'][:,:]
@@ -12,6 +22,7 @@ def calc_rx1 (grid_path, theta_s, theta_b, hc, N, Vstretching, out_file):
     mask_rho = id.variables['mask_rho'][:,:]
     id.close()
 
+    # calculate s-level depth and stretching curves
     z, sc_r, Cs_r = calc_z(h, zice, theta_s, theta_b, hc, N, None, Vstretching)
     for k in range(N):
         tmp = z[k,:,:]
@@ -36,15 +47,21 @@ def calc_rx1 (grid_path, theta_s, theta_b, hc, N, Vstretching, out_file):
     id.variables['rx1'][:,:] = rx1
     id.close()
 
-    
-if __name__ == "__main__":
+def main():
 
-    grid_path = input("Path to grid file: ")
-    theta_s = float(input("theta_s: "))
-    theta_b = float(input("theta_b: "))
-    hc = float(input("hc: "))
-    N = int(input("N: "))
-    Vstretching = int(input("Vstretching (2 or 4): "))
-    out_file = input("Path to output file: ")
+    script=argv[0]
+    
+    grid_path = argv[1]
+    theta_s = float(argv[2])
+    theta_b = float(argv[3])
+    hc = float(argv[4])
+    N = int(argv[5])
+    Vstretching = int(argv[6])
+    out_file = argv[7]
 
     calc_rx1 (grid_path, theta_s, theta_b, hc, N, Vstretching, out_file)
+    
+if __name__ == "__main__":
+    
+    main()
+

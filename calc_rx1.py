@@ -3,9 +3,8 @@ from sys import argv
 from numpy import *
 from calc_z import *
 
-# Calculates the spacial distribution of rx1 from given ROMS
-# grid file and s-coordinate controling parameters amd saves the rx1 field
-# to a netCDF file
+# Calculates rx1 distribution from given ROMS grid file and s-coordinate controling parameters
+# Saves the result as netCDF file
 # Usage:
 # python calc_rx1.py grid_path theta_s theta_b hc N Vstretching(2 or 4) out_file
 # 
@@ -29,6 +28,7 @@ def calc_rx1 (grid_path, theta_s, theta_b, hc, N, Vstretching, out_file):
         tmp[mask_rho==0] = NaN
         z[k,:,:] = tmp
 
+    # calculate rx1
     rx1_3d_i = abs((z[1:,1:,1:]-z[1:,1:,:-1]+z[:-1,1:,1:]-z[:-1,1:,:-1])/(z[1:,1:,1:]+z[1:,1:,:-1]-z[:-1,1:,1:]-z[:-1,1:,:-1]))
     rx1_3d_j = abs((z[1:,1:,1:]-z[1:,:-1,1:]+z[:-1,1:,1:]-z[:-1,:-1,1:])/(z[1:,1:,1:]+z[1:,:-1,1:]-z[:-1,1:,1:]-z[:-1,:-1,1:]))
     rx1_3d = maximum(rx1_3d_i, rx1_3d_j)
@@ -40,6 +40,7 @@ def calc_rx1 (grid_path, theta_s, theta_b, hc, N, Vstretching, out_file):
     rx1[:,0] = rx1[:,1]
     rx1 = ma.masked_where(isnan(rx1), rx1)
 
+    # save as netcdf
     id = Dataset(out_file, 'w')
     id.createDimension('xi_rho', size(lon_2d,1))
     id.createDimension('eta_rho', size(lon_2d,0))

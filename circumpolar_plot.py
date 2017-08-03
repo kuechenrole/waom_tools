@@ -1,4 +1,5 @@
 from netCDF4 import Dataset
+from sys import argv
 from numpy import *
 from matplotlib.pyplot import *
 from cartesian_grid_3d import *
@@ -8,7 +9,6 @@ from rotate_vector_roms import *
 # Input:
 # file_path = path to ocean history/averages file
 # var_name = name of variable in file_path to plot
-# tstep = timestep in file_path to plot (1-indexed)
 # depth_key = integer flag indicating whether to plot the surface level (0), 
 #             the bottom level (1), a specific depth to interpolate to (2), 
 #             the vertical average throughout the entire water column (3), 
@@ -25,7 +25,7 @@ from rotate_vector_roms import *
 #        file rather than displayed on the screen
 # fig_name = if save=True, filename for figure
 # grid_path = path to grid file; only needed if var_name is a vector component
-def circumpolar_plot (file_path, var_name, tstep, depth_key, depth, depth_bounds, colour_bounds=None, save=False, fig_name=None, grid_path=None):
+def circumpolar_plot (file_path, var_name, stats_key, tstep, depth_key, depth, depth_bounds, colour_bounds=None, save=False, fig_name=None, grid_path=None):
 
     # Grid parameters
     theta_s = 4.0
@@ -38,11 +38,25 @@ def circumpolar_plot (file_path, var_name, tstep, depth_key, depth, depth_bounds
     id = Dataset(file_path, 'r')
     if len(id.variables[var_name].shape) == 4:
         # 3D variable; will have to choose depth later
-        data_full = id.variables[var_name][tstep-1,:,:,:]
+        if stats_key=="mean":
+            data_full = mean(id.variables[var_name][:,:,:,:],axis=0)
+        elif stats_key=="amin":
+            data_full = amin(id.variables[var_name][:,:,:,:],axis=0)
+        elif stats_key=="amax":
+            data_full = amax(id.variables[var_name][:,:,:,:],axis=0)
+        elif stats_key=="s":
+            data_full = id.variables[var_name][tstep-1,:,:,:]
         choose_depth = True
     elif len(id.variables[var_name].shape) == 3:
         # 2D variable
-        data = id.variables[var_name][tstep-1,:,:]
+        if stats_key=="mean":
+            data = mean(id.variables[var_name][:,:,:],axis=0)
+        elif stats_key=="amin":
+            data = amin(id.variables[var_name][:,:,:],axis=0)
+        elif stats_key=="amax":
+            data = amax(id.variables[var_name][:,:,:],axis=0)
+        elif stats_key=="s":
+            data = id.variables[var_name][tstep-1,:,:]
         choose_depth = False
     if var_name == 'salt':
         units = 'psu'
@@ -62,13 +76,27 @@ def circumpolar_plot (file_path, var_name, tstep, depth_key, depth, depth_bounds
         if var_name in ['ubar', 'sustr', 'bustr']:
             # 2D u-variable
             u_data = data[:,:]
-            v_data = id.variables[var_name.replace('u','v')][tstep-1,:,:]
+            if stats_key=="mean":
+                v_data = mean(id.variables[var_name.replace('u','v')][:,:,:],axis=0)
+            elif stats_key=="amin":
+                v_data = amin(id.variables[var_name.replace('u','v')][:,:,:],axis=0)
+            elif stats_key=="amax":
+                v_data = amax(id.variables[var_name.replace('u','v')][:,:,:],axis=0)
+            elif stats_key=="s":
+                v_data = id.variables[var_name.replace('u','v')][tstep-1,:,:]
             u_data_lonlat, v_data_lonlat = rotate_vector_roms(u_data, v_data, angle)
             data = u_data_lonlat
         elif var_name in ['vbar', 'svstr', 'bvstr']:
             # 2D v-variable
             v_data = data[:,:]
-            u_data = id.variables[var_name.replace('v','u')][tstep-1,:,:]
+            if stats_key=="mean":
+                u_data = mean(id.variables[var_name.replace('v','u')][:,:,:],axis=0)
+            elif stats_key=="amin":
+                u_data = amin(id.variables[var_name.replace('v','u')][:,:,:],axis=0)
+            elif stats_key=="amax":
+                u_data = amax(id.variables[var_name.replace('v','u')][:,:,:],axis=0)
+            elif stats_key=="s":
+                u_data = id.variables[var_name.replace('v','u')][tstep-1,:,:]
             u_data_lonlat, v_data_lonlat = rotate_vector_roms(u_data, v_data, angle)
             data = v_data_lonlat
         elif var_name in ['u']:
@@ -77,7 +105,14 @@ def circumpolar_plot (file_path, var_name, tstep, depth_key, depth, depth_bounds
             data_full = ma.empty([data_full_ugrid.shape[0],data_full_ugrid.shape[1],data_full_ugrid.shape[2]+1])
             for k in range(N):
                 u_data = data_full_ugrid[k,:,:]
-                v_data = id.variables[var_name.replace('u','v')][tstep-1,k,:,:]
+                if stats_key=="mean":
+                    v_data = mean(id.variables[var_name.replace('u','v')][:,k,:,:],axis=0)
+                elif stats_key=="amin":
+                    v_data = amin(id.variables[var_name.replace('u','v')][:,k,:,:],axis=0)
+                elif stats_key=="amax":
+                    v_data = amax(id.variables[var_name.replace('u','v')][:,k,:,:],axis=0)
+                elif stats_key=="s":
+                    v_data = id.variables[var_name.replace('u','v')][tstep-1,k,:,:]
                 u_data_lonlat, v_data_lonlat = rotate_vector_roms(u_data, v_data, angle)
                 data_full[k,:,:] = u_data_lonlat
         elif var_name in ['v']:
@@ -86,7 +121,14 @@ def circumpolar_plot (file_path, var_name, tstep, depth_key, depth, depth_bounds
             data_full = ma.empty([data_full_vgrid.shape[0],data_full_vgrid.shape[1]+1,data_full_vgrid.shape[2]])
             for k in range(N):
                 v_data = data_full_vgrid[k,:,:]
-                u_data = id.variables[var_name.replace('v','u')][tstep-1,k,:,:]
+                if stats_key=="mean":
+                    u_data = mean(id.variables[var_name.replace('v','u')][:,k,:,:],axis=0)
+                elif stats_key=="amin":
+                    u_data = amin(id.variables[var_name.replace('v','u')][:,k,:,:],axis=0)
+                elif stats_key=="amax":
+                    u_data = amax(id.variables[var_name.replace('v','u')][:,k,:,:],axis=0)
+                elif stats_key=="s":
+                    u_data = id.variables[var_name.replace('v','u')][tstep-1,k,:,:]
                 u_data_lonlat, v_data_lonlat = rotate_vector_roms(u_data, v_data, angle)
                 data_full[k,:,:] = v_data_lonlat        
  
@@ -95,6 +137,10 @@ def circumpolar_plot (file_path, var_name, tstep, depth_key, depth, depth_bounds
     zice = id.variables['zice'][:,:]
     lon = id.variables['lon_rho'][:,:]
     lat = id.variables['lat_rho'][:,:]
+    lon_u = id.variables['lon_u'][:,:]
+    lat_u = id.variables['lat_u'][:,:]
+    lon_v = id.variables['lon_v'][:,:]
+    lat_v = id.variables['lat_v'][:,:]
     mask = id.variables['mask_rho'][:,:]
     id.close()
 
@@ -111,7 +157,7 @@ def circumpolar_plot (file_path, var_name, tstep, depth_key, depth, depth_bounds
     # Convert to spherical coordinates
     #x = -(lat+90)*cos(lon*deg2rad+pi/2)
     #y = (lat+90)*sin(lon*deg2rad+pi/2)
-
+    
     # Choose what to write on the title about depth
     if choose_depth:
         if depth_key == 0:
@@ -137,7 +183,7 @@ def circumpolar_plot (file_path, var_name, tstep, depth_key, depth, depth_bounds
             data = data_full[0,:,:]
         else:
             # We will need z-coordinates and possibly dz
-            dx, dy, dz, z = cartesian_grid_3d(lon, lat, h, zice, theta_s, theta_b, hc, N)
+            dx, dy, dz, z = cartesian_grid_3d(lon, lat,lon_u,lat_u,lon_v,lat_v, h, zice, theta_s, theta_b, hc, N)#cartesian_grid_3d(lon, lat, h, zice, theta_s, theta_b, hc, N)
             if depth_key == 2:
                 # Interpolate to given depth
                 data = interp_depth(data_full, z, depth)
@@ -174,15 +220,21 @@ def circumpolar_plot (file_path, var_name, tstep, depth_key, depth, depth_bounds
     # Plot
     fig = figure(figsize=(16,12))
     fig.add_subplot(1,1,1, aspect='equal')
-    pcolormesh(mask,cmap='gray_r')    
-    pcolormesh(data,cmap=colour_map)    
+    pcolormesh(-mask,cmap='gray_r')    
+    if colour_bounds is not None:
+        pcolormesh(data,cmap=colour_map,vmin=colour_bounds[0],vmax=colour_bounds[1])
+    else:
+        pcolormesh(data,cmap=colour_map)
     ylim(0, len(data[:,0]))
     xlim(0, len(data[0,:]))
 
 #contourf(x, y, data, lev, cmap=colour_map, extend='both')
     cbar = colorbar()
     cbar.ax.tick_params(labelsize=20)
-    title(long_name+' ('+units+')\n'+depth_string, fontsize=30)
+    if stats_key is not "s":
+        title('Time '+stats_key+' of '+long_name+' ('+units+')\n'+depth_string, fontsize=30)
+    elif stats_key == 's':
+        title('Time step '+str(tstep)+' '+long_name+' ('+units+')\n'+depth_string, fontsize=30)
     axis('off')
 
     if save:
@@ -319,12 +371,17 @@ def average_btw_depths (data_3d, z_3d, dz_3d, z_bounds):
     return data    
 
 
-# Command-line interface
-if __name__ == "__main__":
+
+def main():
 
     file_path = input("Path to ocean history/averages file: ")
     var_name = input("Variable name: ")
 
+    stats_key = input("Single time (s) or time average (mean), all maximum (amax), all minimum (amin): ")
+    if stats_key =='s':
+        tstep = int(input("Timestep number (starting at 1): "))
+    else:
+        tstep = None
     # Figure out if we need to ask for depth information
     id = Dataset(file_path, 'r')
     if len(id.variables[var_name].shape) == 4:
@@ -369,8 +426,6 @@ if __name__ == "__main__":
     else:
         grid_path = None
 
-    # Get index of time axis in ROMS history/averages file
-    tstep = int(input("Timestep number (starting at 1): "))
 
     # Get colour bounds if necessary
     colour_bounds = None
@@ -390,7 +445,7 @@ if __name__ == "__main__":
         fig_name = None
 
     # Make the plot
-    circumpolar_plot(file_path, var_name, tstep, depth_key, depth, depth_bounds, colour_bounds, save, fig_name, grid_path)
+    circumpolar_plot(file_path, var_name, stats_key, tstep, depth_key, depth, depth_bounds, colour_bounds, save, fig_name, grid_path)
 
     # Repeat until the user wants to exit
     while True:
@@ -398,7 +453,7 @@ if __name__ == "__main__":
         if repeat == 'y':
             while True:
                 # Ask for changes to the input parameters; repeat until the user is finished
-                changes = input("Enter a parameter to change: (1) file path, (2) variable name, (3) depth, (4) timestep number, (5) colour bounds, (6) save/display; or enter to continue: ")
+                changes = input("Enter a parameter to change: (1) file path, (2) variable name, (3) time statistic (4) depth, (5) colour bounds, (6) save/display; or enter to continue: ")
                 if len(changes) == 0:
                     # No more changes to parameters.
                     break
@@ -450,6 +505,12 @@ if __name__ == "__main__":
                             # Will need the grid file to get the angle
                             grid_path = input("Path to ROMS grid file: ")
                     elif int(changes) == 3:
+                        stats_key = input("Single time (s) or time average (mean), all maximum (amax), all minimum (amin): ")
+                        if stats_key =='s':
+                            tstep = int(input("Timestep number (starting at 1): "))
+                        else:
+                            tstep = None
+                    elif int(changes) == 4:
                         # New depth information
                         depth_type = input("Single depth (s) or vertical average (v)? ")
                         if depth_type == 's':
@@ -478,9 +539,6 @@ if __name__ == "__main__":
                                 shallow_bound = -1*float(input("Enter shallow depth bound (positive, in metres): "))
                                 deep_bound = -1*float(input("Enter deep depth bound (positive, in metres): "))
                                 depth_bounds = [shallow_bound, deep_bound]
-                    elif int(changes) == 4:
-                        # New timestep
-                        tstep = int(input("Timestep number (starting at 1): "))
                     elif int(changes) == 5:
                         # Get colour bounds if necessary
                         colour_bounds = None
@@ -497,11 +555,15 @@ if __name__ == "__main__":
                 fig_name = input("File name for figure: ")
 
             # Make the plot
-            circumpolar_plot(file_path, var_name, tstep, depth_key, depth, depth_bounds, colour_bounds, save, fig_name, grid_path)
+            circumpolar_plot(file_path, var_name, stats_key, tstep, depth_key, depth, depth_bounds, colour_bounds, save, fig_name, grid_path)
 
         else:
             break
 
+# Command-line interface
+if __name__ == "__main__":
+
+    main()
             
                     
         
